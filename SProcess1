@@ -1,0 +1,159 @@
+#Utilizado na fabricação do transistor, Synopsys Process.
+	 	 	
+# nMOS-CCS 8 x 20
+
+AdvancedCalibration
+
+math coord.ucs
+
+# mesh
+line y location= 0.0<um> spacing= 0.25<um> tag= mid
+line y location= 3.0<um> spacing= 0.1<um>
+line y location= 6.0<um> spacing= 0.2<um> tag= right
+#
+line x location= 0.0<um> spacing= 0.05<um> tag= top
+line x location= 0.05<um> spacing= 0.05<um>
+line x location= 0.25<um> spacing= 0.05<um>
+line x location= 0.50<um> spacing= 0.10<um>
+line x location= 2.50<um> spacing= 0.25<um>
+line x location= 5.00<um> spacing= 1.00<um>
+line x location= 10.0<um> spacing= 4.00<um> tag= bottom
+#
+region silicon substrate xlo= top xhi= bottom ylo= mid yhi= right
+
+# nMOS - p substrate
+init field=Boron concentration=1e15<cm-3> !DelayFullD
+
+# II para Ajuste de Vt
+implant Boron dose= 1e13<cm-2> energy= 40<keV> tilt= 7.0<degree> rotation= 0.0<degree>
+
+# comando tdr.bnd salva somente os contornos da estrutura (sem dopagens por ex.) - arquivo p1_fps.tdr)
+# comando tdr salva a estrutura completa com todas as informacoes
+struct tdr=01_Inicio_boron
+
+# Settings para oxidacao e difusao
+# no temperature dependency of mech. properties
+pdbSet Mechanics Parameter.Interpolation 0
+# disable lattice-spacing tracking at the top of the relaxed layer
+pdbSet Mechanics LatticeHistory 0
+# disbale concentration mismatch model
+pdbSet Mechanics Total.Concentration.Model 0
+# disable intrinsic stress definition
+pdbSet Mechanics Deposit.Intrinsic.Stress 0
+# omit stress-balancing step
+pdbSet Mechanics EtchDepoRelax 0
+pdbSet Mechanics StressHistory 0
+pdbSet Mechanics NoBulkRelax 0
+#
+# stress computation switched off in all inert anneling steps
+pdbSet Diffuse NoStressRelax 1
+# disable stress-dependent reaction rate
+pdbSet Diffuse SDReactionRate 0
+
+pdbSet Diffuse MinGrowthStep 2
+pdbSet Diffuse InitTimeStep 0.01
+pdbSet Diffuse dThickness 0.02
+pdbSet Diffuse IncreaseRatio 4
+
+# Using simple diffusion transport model - Fermi
+pdbSet Silicon Dopant DiffModel Fermi
+pdbSet Silicon Boron ActiveModel None
+pdbSet Silicon Phosphorus ActiveModel None
+
+# Recozimento II e oxidacao umida (780nm)
+diffuse temperature= 1000<C> time= 35<min> N2
+diffuse temperature= 1000<C> time= 5<min> O2
+diffuse temperature= 1000<C> time= 180<min> H2O
+diffuse temperature= 1000<C> time= 5<min> O2
+diffuse temperature= 1000<C> time= 10<min> N2
+
+struct tdr=02_oxidação
+
+# Fotogravacao 1 - abertura S/D
+mask name= mask1 left= 4.0<um> right= 7.0<um>
+photo mask= mask1 thickness= 1.0<um>
+
+etch material= Oxide type= polygon polygon= {-1.0 4.0 0.5 4.0 0.5 7.0 -1.0 7.0}
+strip Photoresist
+struct tdr.bnd=03_abertura_photoresist
+
+# II de S/D
+implant Phosphorus dose= 5e15<cm-2> energy= 65<keV> tilt= 7<degree> rotation= 0<degree>
+
+# Recozimento e oxidacao
+diffuse temperature= 1000<C> time= 25<min> N2
+diffuse temperature= 1000<C> time= 5<min> O2
+diffuse temperature= 1000<C> time= 100<min> H2O
+diffuse temperature= 1000<C> time= 5<min> O2
+diffuse temperature= 1000<C> time= 10<min> N2
+
+struct tdr=04_oxidação_cozimento
+
+# Fotogravacao 2 - abertura canal e contato S/D
+mask name= mask2 left= 4.0<um> right= 5.0<um> negative
+photo mask= mask2 thickness= 1.0<um>
+
+etch material= Oxide type= polygon polygon= {-1.5 4.0 1.0 4.0 1.0 0.0 -1.5 0.0}
+etch material= Oxide type= polygon polygon= {-1.5 5.0 1.0 5.0 1.0 7.0 -1.5 7.0}
+strip Photoresist
+struct tdr.bnd=05_retirando_cobertura
+
+# Oxidacao de porta
+diffuse temperature= 1000<C> time= 5<min> N2
+diffuse temperature= 1000<C> time= 5<min> O2
+
+# oxido HCL pc=% lin=linear par=parabolico
+##oxide hcl.pc=0.3 hclP=1 hclT=1000 hcl.lin=3 hcl.par=2.5
+
+diffuse temperature= 1000<C> time= 30<min> O2
+diffuse temperature= 1000<C> time= 5<min> O2
+diffuse temperature= 1000<C> time= 30<min> N2
+
+struct tdr=06
+
+# Fotogravacao 3 - contatos
+mask name= mask3 left= 5.0<um> right= 7.0<um>
+photo mask= mask3 thickness= 1.0<um>
+
+etch material= Oxide type= polygon polygon= {-1.5 5.0 1.0 5.0 1.0 7.0 -1.5 7.0}
+strip Photoresist
+struct tdr.bnd=07_photoresist
+
+# Deposicao aluminio
+deposit Aluminum thickness= 0.5<um> isotropic
+
+# Fotogravacao 4 - metalizacao
+photo mask= mask2 thickness= 0.5<um>
+
+# Remocao excesso de Al
+etch material= Aluminum type= polygon polygon= {-1.5 4.0 1.5 4.0 1.5 5.0 -1.5 5.0}
+strip Photoresist
+
+# Remocao de Al para eliminar quinas (somente simulacao)
+etch material= Aluminum type= polygon polygon= {-1.5 0.0 -1.5 7.0 -0.1 7.0 -0.1 0.0}
+struct tdr=08_portas_aluminio
+
+# Isolacao - nao feito para reduzir mesh
+#deposit Oxide thickness= 1.0<um> isotropic
+
+# Comandos para aumentar ou reduzir L
+# exemplo abaixo corta a estrutura a esquerda de y=2.0
+#transform cut location=1.0 left
+#transform stretch - ver manual
+
+
+# Reflete a estrutura
+transform reflect left
+
+# Estrutura final
+struct tdr=nmos-final
+
+# Preparacao para simulacao do dispositivo
+# Definicao dos eletrodos para aplicacao dos sinais eletricos (sdevice)
+contact name = "Substrate" bottom Silicon
+contact name = "Source" Aluminum y=-6.0 x=0.5
+contact name = "Drain" Aluminum y=6.0 x=0.5
+contact name = "Gate" Aluminum y=0.0 x=0.25
+
+# Estrutura para sdevice
+struct tdr=nmos !Gas

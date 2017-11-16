@@ -1,0 +1,123 @@
+#Utilizado na simulação do transistor fabricado no Synopsys Device, para obtenção da curva Id x Vgs.	
+
+File {
+*input files:
+Grid = "nmos_fps.tdr"
+* output files:
+Plot = "output/nmos_CCS"
+Current = "output/nmos_CCS"
+Output = "output/nMOS_CCS"
+}
+
+# Condicao inicial dos terminais
+Electrode { 
+{Name="Source" Voltage =0.0}
+{Name="Drain" Voltage=0.0}
+{Name="Gate" Voltage=0.0 Barrier=-0.55}
+{Name="Substrate" Voltage=0.0}
+}
+
+# Define os modelos a serem utilizados nas simulacoes
+Physics{
+AreaFactor=20
+Mobility(DopingDependence HighFieldSat Enormal)
+EffectiveIntrinsincDensity (BandGapNarrowing (OldSlotboom))
+}
+
+# Carga de interface em Si/SiO2
+Physics(MaterialInterface="Oxide/Silicon"){
+    Traps(Conc=1.e11 FixedCharge)
+}
+
+# Grandezas a serem escritas no arquivo tdr
+Plot{
+eDensity hDensity eCurrent hCurrent
+Potential SpaceCharge ElectricField
+eMobility hMobility eVelocity hVelocity
+Doping DonorConcentration AcceptorConcentration
+}
+
+# Parte numerica
+Math{
+Extrapolate
+RelErrControl
+}
+
+
+Solve{
+## code for id x vds curve
+##-initial solution:
+#Poisson
+#Coupled { Poisson Hole Electron}
+
+##-ramp gate:
+#    Quasistationary ( InitialStep=0.01 Maxstep=0.05 MinStep=0.005 Goal{ Name="Gate" Voltage=0.1 } )
+#    { Coupled { Poisson Hole Electron} }
+#
+#    Quasistationary ( MaxStep=0.02 Goal{ Name="Gate" Voltage=5.0 } )
+#    { Coupled { Poisson Hole Electron } }
+
+
+# code for id x vgs curve (vds= 5V) and vgs from 0 to 5V
+# initial gate voltage Vgs=0.0V
+Poisson
+Coupled { Poisson Electron }
+Coupled { Poisson Electron Hole}
+Save (FilePrefix="vd0")
+
+# ramp gate and save solutions:
+# second gate voltage Vds=5.0V
+Quasistationary
+    (InitialStep=0.1 Maxstep=0.1 MinStep=0.01 Goal { name="Drain" voltage=5.0 } ) { Coupled { Poisson Electron Hole } } 
+    Save(FilePrefix="vd5")
+
+# 3 gate voltage Vds=0.1V
+Quasistationary
+    (InitialStep=0.1 Maxstep=0.1 MinStep=0.01 Goal { name="Drain" voltage=0.1 } ) { Coupled { Poisson Electron Hole } } 
+    Save(FilePrefix="vd01")
+
+# Load saved structures and ramp drain to create curve:
+# first curve
+Load(FilePrefix="vd0")
+NewCurrentPrefix="vd0_"
+Quasistationary
+    (InitialStep=0.01 Maxstep=0.1 MinStep=0.0001
+    Goal{ name="Gate" voltage=5.0 }
+    )
+    { Coupled {Poisson Electron Hole}
+    #CurrentPlot (time=
+    #    (range = (0 0.2) intervals=20;
+    #   range = (0.2 1.0)))
+    }
+
+# second curve
+Load(FilePrefix="vd5")
+NewCurrentPrefix="vd5_"
+Quasistationary
+    (InitialStep=0.01 Maxstep=0.1 MinStep=0.0001
+    Goal{ name="Gate" voltage=5.0 }
+    )
+    {Coupled {Poisson Electron Hole }
+    }
+
+# 3 curve
+Load(FilePrefix="vd5")
+NewCurrentPrefix="vd15_"
+Quasistationary
+    (InitialStep=0.01 Maxstep=0.1 MinStep=0.0001
+    Goal{ name="Gate" voltage=15.0 }
+    )
+    {Coupled {Poisson Electron Hole }
+    }
+
+# 4 curve
+Load(FilePrefix="vd01")
+NewCurrentPrefix="vd01_"
+Quasistationary
+    (InitialStep=0.01 Maxstep=0.1 MinStep=0.0001
+    Goal{ name="Gate" voltage=5.0 }
+    )
+    {Coupled {Poisson Electron Hole }
+    }
+
+}
